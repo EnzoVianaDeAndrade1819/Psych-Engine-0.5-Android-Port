@@ -302,7 +302,7 @@ class PlayState extends MusicBeatState
 		healthLoss = ClientPrefs.getGameplaySetting('healthloss', 1);
 		instakillOnMiss = ClientPrefs.getGameplaySetting('instakill', false);
 		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
-		cpuControlled = ClientPrefs.getGameplaySetting('yourtrash', false);
+		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
 
 		// var gameCam:FlxCamera = FlxG.camera;
 		camGame = new FlxCamera();
@@ -1012,7 +1012,7 @@ class PlayState extends MusicBeatState
 		scoreTxt.visible = !ClientPrefs.hideHud;
 		add(scoreTxt);
 
-		botplayTxt = new FlxText(400, timeBarBG.y + 55, FlxG.width - 800, "yourtrash", 32);
+		botplayTxt = new FlxText(400, timeBarBG.y + 55, FlxG.width - 800, "BOTPLAY", 32);
 		botplayTxt.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		botplayTxt.scrollFactor.set();
 		botplayTxt.borderSize = 1.25;
@@ -1302,18 +1302,53 @@ class PlayState extends MusicBeatState
 		char.y += char.positionArray[1];
 	}
 	
+	public function videoBG(name:String):Void { //this shit made by sirox
+		var existsFile:Bool = false;
+		var formattedPath:String = #if MODS_ALLOWED Paths.modFolders('videos/' + name + '.webm'); #else ''; #end
+		#if sys
+		if(FileSystem.exists(formattedPath)) {
+			existsFile = true;
+		}
+		#end
+		
+		if(!existsFile) {
+			formattedPath = Paths.video(name);
+			if(FileSystem.exists(formattedPath)) {
+				existsFile = true;
+			}
+		}
+		if(existsFile) {
+			var video = new WebmPlayerS(formattedPath, true);
+            video.startcallback = () -> {
+            	add(video);
+            	remove(dad);
+                remove(boyfriend);
+                remove(gf);
+                add(dad);
+                add(boyfriend);
+                add(gf);
+            }
+            video.setGraphicSize(FlxG.width);
+            video.updateHitbox();
+            video.play();
+		} else {
+			FlxG.log.warn('Couldnt find video file: ' + formattedPath);
+		}
+		return;
+	}
+	
 	public function startVideo(name:String):Void {
 		var foundFile:Bool = false;
-		var fileName:String = 'mods/videos/' + name + '.html';
+		var fileName:String = #if MODS_ALLOWED Paths.modFolders('videos/' + name + '.webm'); #else ''; #end
 		#if sys
-		if(FileSystem.exists(Main.getDataPath + fileName)) {
+		if(FileSystem.exists(fileName)) {
 			foundFile = true;
 		}
 		#end
 
 		if(!foundFile) {
 			fileName = Paths.video(name);
-			if(FileSystem.exists(Main.getDataPath + fileName)) {
+			if(FileSystem.exists(fileName)) {
 				foundFile = true;
 			}
 		}
@@ -1326,16 +1361,20 @@ class PlayState extends MusicBeatState
 			bg.cameras = [camHUD];
 			add(bg);
 
-			var video:BrowserVideoPlayer = new BrowserVideoPlayer(fileName);
-                        (video).finishCallback = function() 
-                        {
-                                remove(bg);
-				if(endingSong) {
-					endSong();
-				} else {
-					startCountdown();
-				}
-                        }
+			var video = new WebmPlayerS(fileName, true);
+            video.endcallback = () -> {
+                remove(video);
+                remove(bg);
+                if(endingSong) {
+                    endSong();
+                } else {
+                    startCountdown();
+                }
+            }
+            video.setGraphicSize(FlxG.width);
+            video.updateHitbox();
+            add(video);
+            video.play();
 			return;
 		} else {
 			FlxG.log.warn('Couldnt find video file: ' + fileName);
@@ -2554,7 +2593,7 @@ class PlayState extends MusicBeatState
 		
 		setOnLuas('cameraX', camFollowPos.x);
 		setOnLuas('cameraY', camFollowPos.y);
-		setOnLuas('botplay', cpuControlled);
+		setOnLuas('botPlay', cpuControlled);
 		callOnLuas('onUpdatePost', [elapsed]);
 	}
 
@@ -3153,7 +3192,7 @@ class PlayState extends MusicBeatState
 					MusicBeatState.switchState(new StoryMenuState());
 
 					// if ()
-					if(!ClientPrefs.getGameplaySetting('practice', false) && !ClientPrefs.getGameplaySetting('yourtrash', false)) {
+					if(!ClientPrefs.getGameplaySetting('practice', false) && !ClientPrefs.getGameplaySetting('botplay', false)) {
 						StoryMenuState.weekCompleted.set(WeekData.weeksList[storyWeek], true);
 
 						if (SONG.validScore)
@@ -4316,7 +4355,7 @@ class PlayState extends MusicBeatState
 
 	#if ACHIEVEMENTS_ALLOWED
 	private function checkForAchievement(achievesToCheck:Array<String>):String {
-		var usedPractice:Bool = (ClientPrefs.getGameplaySetting('practice', false) || ClientPrefs.getGameplaySetting('yourtrash', false));
+		var usedPractice:Bool = (ClientPrefs.getGameplaySetting('practice', false) || ClientPrefs.getGameplaySetting('botplay', false));
 		for (i in 0...achievesToCheck.length) {
 			var achievementName:String = achievesToCheck[i];
 			if(!Achievements.isAchievementUnlocked(achievementName) && !cpuControlled) {
